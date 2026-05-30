@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>유언 프로젝트</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #FFFBF4;
+    --card:     #FFFFFF;
+    --ink:      #3D2C1E;
+    --muted:    #A8917A;
+    --border:   #F0E4D0;
+    --sun:      #F5A623;
+    --sun-l:    #FEF3E2;
+    --leaf:     #5BAD7F;
+    --leaf-l:   #E4F5EC;
+    --sky:      #5BAFD6;
+    --sky-l:    #E4F2FA;
+    --peach:    #F5785A;
+    --peach-l:  #FEF0EC;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 32px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .5s ease;
+  }
+  .screen.active { opacity:1; pointer-events:all; }
+
+  /* 진행바 */
+  .progress-bar {
+    position:fixed; top:0; left:0; right:0; height:4px;
+    background: var(--border); z-index:100;
+  }
+  .progress-fill {
+    height:100%;
+    background: linear-gradient(90deg, var(--sun), var(--peach));
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .step-indicator {
+    position:fixed; top:18px; right:24px;
+    font-size:11px; color:var(--muted);
+    letter-spacing:.1em; font-family:'Noto Serif KR',serif; z-index:100;
+  }
+  .back-btn {
+    position:fixed; top:12px; left:20px;
+    font-size:11px; color:var(--muted);
+    cursor:pointer; z-index:100; padding:8px; display:none;
+  }
+  .back-btn.visible { display:block; }
+
+  /* ── 인트로 */
+  #s-intro {
+    background: linear-gradient(155deg, #FFF5DC 0%, #FFECD6 40%, #FFE4E8 75%, #EDF8F2 100%);
+    gap:0;
+  }
+  .intro-deco {
+    position:absolute; font-family:'Noto Serif KR',serif;
+    font-size:180px; font-weight:700;
+    color:rgba(245,166,35,.08); line-height:1;
+    user-select:none; pointer-events:none;
+  }
+  .intro-deco.top { top:-30px; left:-10px; }
+  .intro-deco.bot { bottom:-30px; right:-5px; }
+
+  .intro-eyebrow {
+    font-family:'Noto Serif KR',serif; font-size:11px;
+    letter-spacing:.28em; color:var(--sky);
+    margin-bottom:24px; text-transform:uppercase;
+  }
+  .intro-title {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(40px,9vw,68px); font-weight:300;
+    color:var(--ink); line-height:1.1;
+    text-align:center; margin-bottom:8px; letter-spacing:-.02em;
+  }
+  .intro-title em { font-style:normal; font-weight:700; color:var(--sun); }
+
+  .intro-sub {
+    font-size:13px; color:var(--muted);
+    text-align:center; line-height:1.8;
+    margin-bottom:14px; letter-spacing:.02em;
+  }
+  .intro-highlight {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(14px,2.8vw,17px);
+    color:var(--ink); text-align:center;
+    letter-spacing:.03em; margin-bottom:44px;
+    padding:12px 28px;
+    border:1.5px solid var(--sun);
+    border-radius:40px;
+    background:rgba(255,255,255,.6);
+    font-weight:400;
+  }
+  .intro-start-btn {
+    background: linear-gradient(120deg, var(--sun) 0%, var(--peach) 100%);
+    color:#fff; border:none; padding:18px 56px;
+    font-family:'Noto Serif KR',serif; font-size:15px;
+    font-weight:500; letter-spacing:.08em;
+    cursor:pointer; border-radius:40px; transition:all .2s;
+    box-shadow: 0 4px 20px rgba(245,120,90,.25);
+  }
+  .intro-start-btn:active { transform:scale(.97); opacity:.9; }
+
+  /* ── 공통 질문 */
+  #s-approach { gap:20px; max-width:680px; width:100%; }
+  #s-hobby, #s-selfword { gap:20px; max-width:680px; width:100%; }
+
+  .q-label {
+    font-size:11px; letter-spacing:.2em; color:var(--sky);
+    text-transform:uppercase; font-family:'Noto Serif KR',serif;
+    align-self:flex-start;
+  }
+  .q-main {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(20px,4vw,28px); font-weight:400;
+    line-height:1.5; color:var(--ink);
+    align-self:flex-start; width:100%;
+  }
+  .q-sub { font-size:13px; color:var(--muted); line-height:1.7; align-self:flex-start; }
+
+  .choice-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
+  .choice-btn {
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:16px; padding:20px 18px;
+    text-align:left; cursor:pointer;
+    transition:all .2s;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .choice-btn:hover {
+    border-color:var(--sun);
+    background:var(--sun-l);
+    transform:translateY(-2px);
+  }
+  .choice-btn.selected {
+    background: linear-gradient(120deg, var(--sun) 0%, var(--peach) 100%);
+    border-color:transparent; color:#fff;
+  }
+  .choice-btn.selected .choice-num { color:rgba(255,255,255,.6); }
+  .choice-num {
+    font-size:11px; color:var(--border);
+    letter-spacing:.1em; font-family:'Noto Serif KR',serif;
+  }
+  .choice-text {
+    font-size:15px; line-height:1.5;
+    font-family:'Noto Serif KR',serif; font-weight:400;
+  }
+
+  .next-btn {
+    width:100%;
+    background: linear-gradient(120deg, var(--leaf) 0%, var(--sky) 100%);
+    color:#fff; border:none; padding:18px;
+    font-family:'Noto Serif KR',serif; font-size:14px;
+    letter-spacing:.1em; cursor:pointer;
+    border-radius:40px; opacity:0; pointer-events:none;
+    transition:opacity .3s; margin-top:4px;
+    box-shadow: 0 4px 16px rgba(91,173,127,.2);
+  }
+  .next-btn.show { opacity:1; pointer-events:all; }
+  .next-btn:active { transform:scale(.99); }
+
+  /* ── 정보 파악 */
+  #s-info { max-width:600px; width:100%; gap:20px; }
+  .info-card {
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:16px; padding:20px; width:100%;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .info-label {
+    font-size:11px; color:var(--leaf);
+    letter-spacing:.15em; text-transform:uppercase;
+    font-family:'Noto Serif KR',serif;
+  }
+  .radio-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .radio-btn {
+    border:1.5px solid var(--border); border-radius:40px;
+    padding:9px 18px; font-size:13px; cursor:pointer;
+    transition:all .15s; background:var(--bg);
+    font-family:'Noto Sans KR',sans-serif; white-space:nowrap;
+    color:var(--ink);
+  }
+  .radio-btn:hover { border-color:var(--leaf); }
+  .radio-btn.selected {
+    background: linear-gradient(120deg, var(--leaf) 0%, var(--sky) 100%);
+    border-color:transparent; color:#fff;
+  }
+  .humor-box {
+    background:var(--sun-l);
+    border-left:3px solid var(--sun);
+    border-radius:0 12px 12px 0;
+    padding:14px 16px;
+    font-size:13px; color:#7A4A0A; line-height:1.7;
+  }
+
+  /* ── 유언 입력 */
+  #s-will { max-width:600px; width:100%; gap:20px; }
+  .will-title {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(22px,5vw,32px); font-weight:300;
+    line-height:1.4; text-align:center; width:100%; color:var(--ink);
+  }
+  .will-title strong {
+    font-weight:700; display:block;
+    font-size:clamp(26px,6vw,38px); color:var(--ink);
+  }
+  .will-input-wrap {
+    width:100%; background:var(--card);
+    border:1.5px solid var(--border); border-radius:16px;
+    padding:24px; display:flex; flex-direction:column; gap:8px;
+  }
+  .will-input-label {
+    font-size:11px; color:var(--leaf);
+    letter-spacing:.15em; text-transform:uppercase;
+    font-family:'Noto Serif KR',serif;
+  }
+  .will-textarea {
+    width:100%; border:none; outline:none; resize:none;
+    font-family:'Noto Serif KR',serif; font-size:18px;
+    font-weight:400; line-height:1.7; color:var(--ink);
+    background:transparent; min-height:80px;
+  }
+  .will-textarea::placeholder { color:var(--border); font-style:italic; }
+  .char-count {
+    font-size:11px; color:var(--border);
+    text-align:right; font-family:'Noto Serif KR',serif;
+  }
+  .name-input {
+    width:100%; background:var(--card);
+    border:1.5px solid var(--border); border-radius:40px;
+    padding:16px 24px; font-family:'Noto Serif KR',serif;
+    font-size:15px; color:var(--ink); outline:none;
+    transition:border-color .2s;
+  }
+  .name-input:focus { border-color:var(--sun); }
+  .name-input::placeholder { color:var(--border); font-style:italic; }
+
+  /* ── 리워드 */
+  #s-reward { max-width:600px; width:100%; gap:16px; }
+  .reward-header { text-align:center; width:100%; }
+  .reward-eyebrow {
+    font-size:11px; letter-spacing:.2em; color:var(--sky);
+    font-family:'Noto Serif KR',serif; text-transform:uppercase; margin-bottom:10px;
+  }
+  .reward-title {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(18px,4vw,24px); font-weight:400; line-height:1.5; color:var(--ink);
+  }
+  .reward-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+  .reward-card {
+    background:var(--card); border:1.5px solid var(--border);
+    border-radius:16px; padding:16px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .reward-card.special {
+    grid-column:1/-1;
+    background: linear-gradient(120deg, var(--leaf) 0%, var(--sky) 100%);
+    border-color:transparent; color:#fff;
+  }
+  .reward-icon { font-size:22px; }
+  .reward-name {
+    font-family:'Noto Serif KR',serif; font-size:14px;
+    font-weight:500; line-height:1.4;
+  }
+  .reward-desc { font-size:11px; color:var(--muted); line-height:1.6; }
+  .reward-card.special .reward-desc { color:rgba(255,255,255,.8); }
+
+  .consent-box {
+    width:100%; background:var(--leaf-l);
+    border-radius:12px; padding:14px 16px;
+    display:flex; gap:12px; align-items:flex-start; cursor:pointer;
+  }
+  .consent-check {
+    width:20px; height:20px; border:1.5px solid var(--border);
+    border-radius:6px; flex-shrink:0; margin-top:1px;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; background:white;
+  }
+  .consent-check.checked {
+    background: linear-gradient(120deg, var(--leaf), var(--sky));
+    border-color:transparent;
+  }
+  .consent-check.checked::after {
+    content:''; width:10px; height:6px;
+    border-left:2px solid white; border-bottom:2px solid white;
+    transform:rotate(-45deg) translateY(-1px);
+  }
+  .consent-text { font-size:12px; color:var(--muted); line-height:1.7; }
+
+  /* ── 완료 */
+  #s-done {
+    background: linear-gradient(145deg, #FFF8E7 0%, #FFF0EC 35%, #E8F8F0 70%, #EAF4FC 100%);
+    gap:0; text-align:center;
+  }
+  .done-num {
+    font-family:'Noto Serif KR',serif; font-size:80px;
+    font-weight:300; color:rgba(245,166,35,.2);
+    line-height:1; margin-bottom:8px;
+  }
+  .done-tag {
+    font-size:11px; color:var(--muted);
+    letter-spacing:.2em; margin-bottom:24px;
+    font-family:'Noto Serif KR',serif; text-transform:uppercase;
+  }
+  .done-title {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(24px,5vw,36px); font-weight:300;
+    color:var(--ink); line-height:1.5; margin-bottom:12px;
+  }
+  .done-will {
+    font-family:'Noto Serif KR',serif;
+    font-size:clamp(16px,3vw,20px); font-weight:400;
+    color:var(--ink); line-height:1.7;
+    max-width:480px; margin:0 auto 32px; padding:20px 24px;
+    border-top:1.5px solid var(--sun-l);
+    border-bottom:1.5px solid var(--sun-l);
+    font-style:italic;
+  }
+  .done-sub {
+    font-size:13px; color:var(--muted);
+    line-height:1.8; margin-bottom:40px; max-width:400px;
+  }
+  .done-reset-btn {
+    background:rgba(255,255,255,.7);
+    border:1.5px solid var(--sun);
+    color:var(--sun); padding:14px 44px;
+    font-family:'Noto Serif KR',serif; font-size:13px;
+    letter-spacing:.1em; cursor:pointer;
+    border-radius:40px; transition:all .2s;
+  }
+  .done-reset-btn:active { opacity:.7; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .screen.active > * { animation:fadeUp .5s ease both; }
+  .screen.active > *:nth-child(2) { animation-delay:.08s; }
+  .screen.active > *:nth-child(3) { animation-delay:.14s; }
+  .screen.active > *:nth-child(4) { animation-delay:.20s; }
+  .screen.active > *:nth-child(5) { animation-delay:.26s; }
+  .screen.active > *:nth-child(6) { animation-delay:.32s; }
+  .screen.active > *:nth-child(7) { animation-delay:.38s; }
+
+  .divider { width:100%; height:1px; background:var(--border); }
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+<div class="step-indicator" id="stepInd"></div>
+<div class="back-btn" id="backBtn" onclick="goBack()">← 이전</div>
+
+<!-- ── S0: 인트로 ─────────────────── -->
+<div class="screen active" id="s-intro">
+  <div class="intro-deco top">유</div>
+  <div class="intro-deco bot">언</div>
+  <p class="intro-eyebrow">한장 책방 × 유언 프로젝트</p>
+  <h1 class="intro-title"><em>유언</em><br>프로젝트</h1>
+  <p class="intro-sub">당신의 마지막 한 줄을 모읍니다</p>
+  <p class="intro-highlight">12주 뒤, 책과 전시로 남습니다</p>
+  <button class="intro-start-btn" onclick="goTo(1)">시작하기</button>
+</div>
+
+<!-- ── S1: 어프로치 ─────────────────── -->
+<div class="screen" id="s-approach">
+  <p class="q-label">Question 01</p>
+  <p class="q-main">죽기 전에<br>꼭 하고 싶은 게 있다면?</p>
+  <p class="q-sub">솔직하게 골라주세요. 여러 개도 괜찮아요.</p>
+
+  <div class="choice-grid" id="choiceGrid">
+    <div class="choice-btn" data-val="외장하드 지우기" onclick="toggleChoice(this)">
+      <span class="choice-num">01</span>
+      <span class="choice-text">외장하드 지우기</span>
+    </div>
+    <div class="choice-btn" data-val="사랑하는 사람과 밥 먹기" onclick="toggleChoice(this)">
+      <span class="choice-num">02</span>
+      <span class="choice-text">사랑하는 사람과 밥 먹기</span>
+    </div>
+    <div class="choice-btn" data-val="혼자 하고 싶은 일 하기" onclick="toggleChoice(this)">
+      <span class="choice-num">03</span>
+      <span class="choice-text">혼자 하고 싶은 일 하기</span>
+    </div>
+    <div class="choice-btn" data-val="AI 대화 내역 지우기" onclick="toggleChoice(this)">
+      <span class="choice-num">04</span>
+      <span class="choice-text">AI와의 대화 내역<br>지우기</span>
+    </div>
+  </div>
+
+  <button class="next-btn" id="approachNext" onclick="goTo(2)">다음으로 →</button>
+</div>
+
+<!-- ── S2: 정보 파악 ─────────────────── -->
+<div class="screen" id="s-info">
+  <p class="q-label">잠깐만요</p>
+  <p class="q-main">몇 가지만<br>여쭤봐도 될까요?</p>
+
+  <div class="info-card">
+    <p class="info-label">지금 뭐 하는 분이세요?</p>
+    <div class="radio-row" id="statusRow">
+      <div class="radio-btn" onclick="selectRadio('status', this, '대학생')">대학생</div>
+      <div class="radio-btn" onclick="selectRadio('status', this, '취준생')">취준생</div>
+      <div class="radio-btn" onclick="selectRadio('status', this, '직장인')">직장인</div>
+      <div class="radio-btn" onclick="selectRadio('status', this, '프리랜서')">프리랜서</div>
+      <div class="radio-btn" onclick="selectRadio('status', this, '그냥 쉬는 중')">그냥 쉬는 중</div>
+      <div class="radio-btn" onclick="selectRadio('status', this, '기타')">기타</div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <p class="info-label">이 근처 자주 오세요?</p>
+    <div class="radio-row" id="locationRow">
+      <div class="radio-btn" onclick="selectRadio('location', this, '여기 살아요')">여기 살아요</div>
+      <div class="radio-btn" onclick="selectRadio('location', this, '학교/직장이 근처')">학교·직장이 근처</div>
+      <div class="radio-btn" onclick="selectRadio('location', this, '오다가 들름')">오다가 들름</div>
+      <div class="radio-btn" onclick="selectRadio('location', this, '처음 왔어요')">처음 왔어요</div>
+    </div>
+  </div>
+
+  <div class="humor-box">
+    💡 <strong>참고로</strong> — 외장하드 지우기를 고르신 분들이 오늘 제일 많았어요.
+    뭔가... 다들 비밀이 있으신 것 같아요 (웃음)
+  </div>
+
+  <button class="next-btn show" onclick="goTo(3)">다음으로 →</button>
+</div>
+
+<!-- ── S3: 혼자만의 시간 (취미 파악) ─── -->
+<div class="screen" id="s-hobby">
+  <p class="q-label">Question 03</p>
+  <p class="q-main">혼자만의 시간엔<br>주로 뭘 해요?</p>
+  <p class="q-sub">가장 솔직한 것 하나만요.</p>
+
+  <div class="choice-grid" id="hobbyGrid">
+    <div class="choice-btn" data-val="유튜브·넷플릭스" onclick="selectSingle('hobby', this)">
+      <span class="choice-num">01</span>
+      <span class="choice-text">유튜브·넷플릭스</span>
+    </div>
+    <div class="choice-btn" data-val="음악 듣기" onclick="selectSingle('hobby', this)">
+      <span class="choice-num">02</span>
+      <span class="choice-text">음악 듣기</span>
+    </div>
+    <div class="choice-btn" data-val="운동" onclick="selectSingle('hobby', this)">
+      <span class="choice-num">03</span>
+      <span class="choice-text">운동</span>
+    </div>
+    <div class="choice-btn" data-val="책·만화·게임" onclick="selectSingle('hobby', this)">
+      <span class="choice-num">04</span>
+      <span class="choice-text">책·만화·게임</span>
+    </div>
+    <div class="choice-btn" data-val="아무것도 안 하기" onclick="selectSingle('hobby', this)">
+      <span class="choice-num">05</span>
+      <span class="choice-text">아무것도 안 하기</span>
+    </div>
+    <div class="choice-btn" data-val="생각하기" onclick="selectSingle('hobby', this)">
+      <span class="choice-num">06</span>
+      <span class="choice-text">그냥 생각하기</span>
+    </div>
+  </div>
+
+  <button class="next-btn" id="hobbyNext" onclick="goTo(4)">다음으로 →</button>
+</div>
+
+<!-- ── S4: 나한테 해주고 싶은 말 (회상) ─── -->
+<div class="screen" id="s-selfword">
+  <p class="q-label">Question 04</p>
+  <p class="q-main">지금의 나한테<br>해주고 싶은 말이 있다면?</p>
+  <p class="q-sub">딱 하나만요. 솔직하게.</p>
+
+  <div class="choice-grid" id="selfwordGrid">
+    <div class="choice-btn" data-val="잘 하고 있어" onclick="selectSingle('selfword', this)">
+      <span class="choice-num">01</span>
+      <span class="choice-text">잘 하고 있어</span>
+    </div>
+    <div class="choice-btn" data-val="쉬어도 돼" onclick="selectSingle('selfword', this)">
+      <span class="choice-num">02</span>
+      <span class="choice-text">쉬어도 돼</span>
+    </div>
+    <div class="choice-btn" data-val="더 용기 내" onclick="selectSingle('selfword', this)">
+      <span class="choice-num">03</span>
+      <span class="choice-text">더 용기 내</span>
+    </div>
+    <div class="choice-btn" data-val="살아 있어 줘서 고마워" onclick="selectSingle('selfword', this)">
+      <span class="choice-num">04</span>
+      <span class="choice-text">살아 있어 줘서<br>고마워</span>
+    </div>
+    <div class="choice-btn" data-val="그냥 버텨" onclick="selectSingle('selfword', this)">
+      <span class="choice-num">05</span>
+      <span class="choice-text">그냥 버텨</span>
+    </div>
+    <div class="choice-btn" data-val="모르겠어" onclick="selectSingle('selfword', this)">
+      <span class="choice-num">06</span>
+      <span class="choice-text">모르겠어</span>
+    </div>
+  </div>
+
+  <button class="next-btn" id="selfwordNext" onclick="goTo(5)">유언 쓰러 가기 →</button>
+</div>
+
+<!-- ── S5: 유언 입력 ─────────────────── -->
+<div class="screen" id="s-will">
+  <p class="q-label">마지막 한 줄</p>
+  <p class="will-title">
+    지금 이 순간<br>
+    <strong>당신의 한 줄은?</strong>
+  </p>
+
+  <div class="will-input-wrap">
+    <p class="will-input-label">유언을 써주세요</p>
+    <textarea
+      class="will-textarea"
+      id="willText"
+      placeholder="거창하지 않아도 돼요. 오늘 점심 메뉴도, 하고 싶은 말도, 뭐든 괜찮아요."
+      maxlength="100"
+      oninput="onWillInput()"
+      rows="3"
+    ></textarea>
+    <p class="char-count"><span id="charCount">0</span> / 100</p>
+  </div>
+
+  <input
+    class="name-input"
+    id="nameInput"
+    type="text"
+    placeholder="닉네임 or 이름 (익명 가능)"
+    maxlength="20"
+  >
+
+  <button class="next-btn" id="willNext" onclick="goTo(6)">다음으로 →</button>
+</div>
+
+<!-- ── S6: 리워드 안내 ─────────────────── -->
+<div class="screen" id="s-reward">
+  <div class="reward-header">
+    <p class="reward-eyebrow">스토리 미팅 선정 시</p>
+    <p class="reward-title">소스가 좋으면<br>이런 것들을 드려요</p>
+  </div>
+
+  <div class="reward-cards">
+    <div class="reward-card">
+      <span class="reward-icon">📱</span>
+      <p class="reward-name">아이패드</p>
+      <p class="reward-desc">스토리 미팅 선정자 중 추첨</p>
+    </div>
+    <div class="reward-card">
+      <span class="reward-icon">📖</span>
+      <p class="reward-name">책 + 전시 티켓</p>
+      <p class="reward-desc">완성된 책 1권 + 전시 초대권</p>
+    </div>
+    <div class="reward-card">
+      <span class="reward-icon">☕</span>
+      <p class="reward-name">기프티콘</p>
+      <p class="reward-desc">참여 감사 선물</p>
+    </div>
+    <div class="reward-card special">
+      <span class="reward-icon">🌱</span>
+      <p class="reward-name">기부 증서 — 이름 수록</p>
+      <p class="reward-desc">수익의 일부를 청년 우울증 지원사업에 기부합니다. 증서에 당신의 이름이 올라가요.</p>
+    </div>
+  </div>
+
+  <div class="consent-box" id="consentBox" onclick="toggleConsent()">
+    <div class="consent-check" id="consentCheck"></div>
+    <p class="consent-text">수집된 답변은 <strong>유언 프로젝트 출판 및 전시 목적으로만</strong> 사용되며, 개인 식별 정보는 익명 처리됩니다. 동의합니다.</p>
+  </div>
+
+  <button class="next-btn" id="rewardNext" onclick="submitAll()">제출하기 →</button>
+</div>
+
+<!-- ── S7: 완료 ─────────────────── -->
+<div class="screen" id="s-done">
+  <p class="done-num" id="doneNum">—</p>
+  <p class="done-tag">수거됨 · collected</p>
+  <p class="done-title">한 줄이<br>책이 됩니다</p>
+  <p class="done-will" id="doneWill"></p>
+  <p class="done-sub">
+    소스가 좋으면 스토리 미팅을 요청드릴게요.<br>
+    선정되시면 따로 연락드려요.
+  </p>
+  <button class="done-reset-btn" onclick="resetAll()">다음 분 시작 →</button>
+</div>
+
+<script>
+  // ── 상태 ──────────────────────────────────
+  let currentScreen = 0;
+  const totalScreens = 7;
+  let state = {
+    choices: [],
+    status: '',
+    location: '',
+    hobby: '',
+    selfword: '',
+    will: '',
+    name: '',
+    consent: false,
+    count: parseInt(localStorage.getItem('yueon_count') || '0')
+  };
+  let consentChecked = false;
+
+  const screens = ['s-intro','s-approach','s-info','s-hobby','s-selfword','s-will','s-reward','s-done'];
+
+  // ── 화면 전환 ────────────────────────────
+  function goTo(n) {
+    document.getElementById(screens[currentScreen]).classList.remove('active');
+    currentScreen = n;
+    document.getElementById(screens[n]).classList.add('active');
+    updateUI();
+  }
+
+  function goBack() {
+    if (currentScreen > 1) goTo(currentScreen - 1);
+  }
+
+  function updateUI() {
+    const p = currentScreen === 0 ? 0 : (currentScreen / (totalScreens - 1)) * 100;
+    document.getElementById('progress').style.width = p + '%';
+
+    const ind = document.getElementById('stepInd');
+    if (currentScreen === 0 || currentScreen >= totalScreens) {
+      ind.textContent = '';
+    } else {
+      ind.textContent = `${currentScreen} / ${totalScreens - 1}`;
+    }
+
+    const back = document.getElementById('backBtn');
+    if (currentScreen > 1 && currentScreen < totalScreens) {
+      back.classList.add('visible');
+    } else {
+      back.classList.remove('visible');
+    }
+  }
+
+  // ── S1: 선택지 ───────────────────────────
+  function toggleChoice(el) {
+    el.classList.toggle('selected');
+    state.choices = Array.from(document.querySelectorAll('.choice-btn.selected'))
+      .map(b => b.dataset.val);
+    const btn = document.getElementById('approachNext');
+    if (state.choices.length > 0) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+
+  // ── S3: 취미 단일 선택 ───────────────────
+
+
+  function selectSingle(group, el) {
+    const gridId = group === 'hobby' ? 'hobbyGrid' : 'selfwordGrid';
+    document.getElementById(gridId).querySelectorAll('.choice-btn')
+      .forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    const val = el.dataset.val;
+    state[group] = val;
+
+
+    const nextId = group === 'hobby' ? 'hobbyNext' : 'selfwordNext';
+    document.getElementById(nextId).classList.add('show');
+  }
+
+
+  function selectRadio(group, el, val) {
+    const row = document.getElementById(group === 'status' ? 'statusRow' : 'locationRow');
+    row.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    state[group] = val;
+  }
+
+  // ── S3: 유언 입력 ────────────────────────
+  function onWillInput() {
+    const ta = document.getElementById('willText');
+    const count = ta.value.length;
+    document.getElementById('charCount').textContent = count;
+    state.will = ta.value;
+    const btn = document.getElementById('willNext');
+    if (count > 0) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+
+  // ── S4: 동의 ─────────────────────────────
+  function toggleConsent() {
+    consentChecked = !consentChecked;
+    const check = document.getElementById('consentCheck');
+    const btn = document.getElementById('rewardNext');
+    if (consentChecked) {
+      check.classList.add('checked');
+      btn.classList.add('show');
+    } else {
+      check.classList.remove('checked');
+      btn.classList.remove('show');
+    }
+  }
+
+  // ── 제출 ─────────────────────────────────
+  function submitAll() {
+    if (!consentChecked) return;
+    state.name = document.getElementById('nameInput').value || '익명';
+    state.will = document.getElementById('willText').value;
+
+    // 카운트 증가
+    state.count++;
+    localStorage.setItem('yueon_count', state.count);
+
+    // 완료 화면 채우기
+    document.getElementById('doneNum').textContent = String(state.count).padStart(3, '0');
+    document.getElementById('doneWill').textContent =
+      '\u201C' + (state.will || '...') + '\u201D';
+
+    goTo(7);
+  }
+
+  // ── 리셋 ─────────────────────────────────
+  function resetAll() {
+    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('willText').value = '';
+    document.getElementById('charCount').textContent = '0';
+    document.getElementById('nameInput').value = '';
+    document.getElementById('approachNext').classList.remove('show');
+    document.getElementById('hobbyNext').classList.remove('show');
+    document.getElementById('selfwordNext').classList.remove('show');
+    document.getElementById('willNext').classList.remove('show');
+    document.getElementById('rewardNext').classList.remove('show');
+    document.getElementById('consentCheck').classList.remove('checked');
+    consentChecked = false;
+    state = {
+      choices: [], status: '', location: '', hobby: '', selfword: '',
+      will: '', name: '', consent: false,
+      count: state.count
+    };
+    goTo(1);
+  }
+
+  // ── 초기 카운트 표시 ─────────────────────
+  updateUI();
+</script>
+</body>
+</html>
